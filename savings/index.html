@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>存錢小幫手</title>
+<style>
+:root{
+  --bg:#f5f6f8; --card:#fff; --ink:#1d2330; --muted:#6b7385; --line:#e3e6ec;
+  --pri:#1f8a5b; --pri-soft:#e3f4ec; --warn:#c2410c; --warn-soft:#fdeee6; --accent:#2563eb;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#12151b;--card:#1b2029;--ink:#e8ebf1;--muted:#98a0b3;--line:#2b3240;
+  --pri:#3ccf8e;--pri-soft:#173528;--warn:#fb923c;--warn-soft:#3a2216;--accent:#60a5fa}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
+header{padding:16px;max-width:760px;margin:0 auto;display:flex;justify-content:space-between;align-items:center}
+header h1{font-size:20px;margin:0}
+main{max-width:760px;margin:0 auto;padding:0 16px 96px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.card h2{font-size:16px;margin:0 0 10px}
+.muted{color:var(--muted);font-size:13px}
+.big{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--bg);border-radius:10px;padding:10px}
+.stat b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+.bar{height:10px;background:var(--line);border-radius:6px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--pri);border-radius:6px}
+.bar.over>i{background:var(--warn)}
+input,select{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+input{flex:1}
+button{font:inherit;border:0;border-radius:8px;padding:8px 14px;background:var(--pri);color:#fff;cursor:pointer;white-space:nowrap}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button.warn{background:var(--warn)}
+button.sm{padding:4px 10px;font-size:13px}
+ul.list{list-style:none;margin:0;padding:0}
+ul.list li{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+ul.list li:last-child{border:0}
+.tip{background:var(--pri-soft);border-radius:10px;padding:10px 12px;font-size:14px}
+.alert{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:14px}
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:center}
+nav div{display:flex;max-width:760px;width:100%}
+nav button{flex:1;background:none;color:var(--muted);border-radius:0;padding:10px 2px;font-size:12px;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button span{font-size:20px;line-height:1}
+nav button.on{color:var(--pri);font-weight:600}
+.tab{display:none}.tab.on{display:block}
+.cells{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:5px}
+.cells button{padding:8px 0;background:var(--bg);color:var(--ink);border:1px solid var(--line);font-size:13px;font-variant-numeric:tabular-nums}
+.cells button.done{background:var(--pri);color:#fff;border-color:var(--pri)}
+.goal{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+.goal .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.chip{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--pri-soft);color:var(--pri)}
+.chip.w{background:var(--warn-soft);color:var(--warn)}
+@media (max-width:480px){.grid2{grid-template-columns:1fr 1fr}.big{font-size:26px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>💰 存錢小幫手</h1>
+  <span class="muted" id="today"></span>
+</header>
+<main>
+
+<!-- 總覽 -->
+<section class="tab on" id="t-home">
+  <div class="card">
+    <div class="muted">已存總額</div>
+    <div class="big" id="h-total">$0</div>
+    <div class="grid2" style="margin-top:10px">
+      <div class="stat"><span class="muted">本月已存 / 目標</span><b id="h-month">0 / 0</b></div>
+      <div class="stat"><span class="muted">連續存錢天數</span><b id="h-streak">0 天</b></div>
+      <div class="stat"><span class="muted">今天還能花</span><b id="h-daily">$0</b></div>
+      <div class="stat"><span class="muted">本月剩餘可花</span><b id="h-left">$0</b></div>
+    </div>
+    <div style="margin-top:12px"><div class="bar" id="h-bar"><i style="width:0"></i></div>
+    <div class="muted" id="h-bar-t" style="margin-top:4px"></div></div>
+  </div>
+  <div id="h-alert"></div>
+  <div class="card">
+    <h2>快速存一筆</h2>
+    <div class="row">
+      <input id="q-amt" type="number" inputmode="numeric" placeholder="金額">
+      <select id="q-goal"></select>
+      <button onclick="quickSave()">存入</button>
+    </div>
+    <div class="tip" style="margin-top:10px" id="h-tip"></div>
+  </div>
+  <div class="card">
+    <h2>最近紀錄</h2>
+    <ul class="list" id="h-log"></ul>
+  </div>
+</section>
+
+<!-- 預算：先存後花 -->
+<section class="tab" id="t-plan">
+  <div class="card">
+    <h2>先存後花｜每月計畫</h2>
+    <p class="muted" style="margin-top:0">發薪日先把「要存的錢」轉到另一個帳戶，剩下的才是可以花的錢。</p>
+    <div class="grid2">
+      <label>每月收入<br><input id="p-income" type="number" inputmode="numeric"></label>
+      <label>固定支出（房租、帳單）<br><input id="p-fixed" type="number" inputmode="numeric"></label>
+      <label>儲蓄比例 %<br><input id="p-rate" type="number" inputmode="numeric"></label>
+      <label>發薪日（每月幾號）<br><input id="p-payday" type="number" min="1" max="31"></label>
+    </div>
+    <button style="margin-top:12px" onclick="savePlan()">儲存計畫</button>
+  </div>
+  <div class="card" id="p-result"></div>
+</section>
+
+<!-- 目標 -->
+<section class="tab" id="t-goals">
+  <div class="card">
+    <h2>新增存錢目標</h2>
+    <div class="row">
+      <input id="g-name" placeholder="例如：緊急預備金、旅行">
+    </div>
+    <div class="row" style="margin-top:8px">
+      <input id="g-target" type="number" inputmode="numeric" placeholder="目標金額">
+      <input id="g-date" type="date">
+      <button onclick="addGoal()">新增</button>
+    </div>
+  </div>
+  <div class="card"><h2>我的目標</h2><div id="g-list"></div></div>
+</section>
+
+<!-- 記帳 -->
+<section class="tab" id="t-spend">
+  <div class="card">
+    <h2>記一筆花費</h2>
+    <div class="row">
+      <input id="s-amt" type="number" inputmode="numeric" placeholder="金額">
+      <select id="s-cat">
+        <option>餐飲</option><option>交通</option><option>購物</option><option>娛樂</option><option>生活</option><option>其他</option>
+      </select>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <input id="s-note" placeholder="備註（選填）">
+      <button onclick="addSpend()">記錄</button>
+    </div>
+  </div>
+  <div class="card"><h2>本月分類</h2><div id="s-cats"></div></div>
+  <div class="card"><h2>本月花費</h2><ul class="list" id="s-list"></ul></div>
+</section>
+
+<!-- 挑戰 -->
+<section class="tab" id="t-chal">
+  <div class="card">
+    <h2>365 天存錢挑戰</h2>
+    <p class="muted" style="margin-top:0">每天挑一格，存下格子上的金額。全部完成可存 <b id="c-max"></b>。點格子即存入所選目標。</p>
+    <div class="row" style="margin-bottom:10px">
+      <select id="c-mode" onchange="setChalMode(this.value)">
+        <option value="365">365 天（1~365 元）</option>
+        <option value="52">52 週（每週 50 元遞增）</option>
+      </select>
+      <select id="c-goal"></select>
+    </div>
+    <div class="bar"><i id="c-bar" style="width:0"></i></div>
+    <div class="muted" id="c-prog" style="margin:4px 0 10px"></div>
+    <div class="cells" id="c-cells"></div>
+  </div>
+</section>
+
+<!-- 冷靜清單 -->
+<section class="tab" id="t-wish">
+  <div class="card">
+    <h2>想買清單｜72 小時冷靜期</h2>
+    <p class="muted" style="margin-top:0">想衝動購物時先放進來。3 天後還想要再買；放棄的話，那筆錢直接存起來。</p>
+    <div class="row">
+      <input id="w-name" placeholder="想買什麼">
+      <input id="w-price" type="number" inputmode="numeric" placeholder="價格" style="max-width:120px">
+      <button onclick="addWish()">放進清單</button>
+    </div>
+  </div>
+  <div class="card"><h2>冷靜中</h2><div id="w-list"></div></div>
+  <div class="card"><div class="muted">靠冷靜清單省下的錢</div><div class="big" id="w-saved">$0</div></div>
+  <div class="card">
+    <h2>資料備份</h2>
+    <p class="muted" style="margin-top:0">資料只存在這台裝置的瀏覽器裡，建議定期匯出備份。</p>
+    <div class="row">
+      <button class="ghost" onclick="exportData()">匯出 JSON</button>
+      <label class="ghost" style="border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer">匯入<input type="file" accept=".json" onchange="importData(this)" hidden></label>
+      <button class="warn" onclick="resetAll()">清除全部</button>
+    </div>
+  </div>
+</section>
+
+</main>
+<nav><div>
+  <button class="on" data-t="home"><span>🏠</span>總覽</button>
+  <button data-t="plan"><span>📋</span>計畫</button>
+  <button data-t="goals"><span>🎯</span>目標</button>
+  <button data-t="spend"><span>🧾</span>記帳</button>
+  <button data-t="chal"><span>🔢</span>挑戰</button>
+  <button data-t="wish"><span>🛑</span>冷靜</button>
+</div></nav>
+
+<script>
+const KEY='savings-helper-v1';
+const DEF={plan:{income:0,fixed:0,rate:20,payday:5},goals:[],deposits:[],spends:[],chal:{mode:'365',done:[]},wishes:[]};
+let S=load();
+function load(){try{const d=JSON.parse(localStorage.getItem(KEY));if(d)return Object.assign(structuredClone(DEF),d)}catch(e){}return structuredClone(DEF)}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}render()}
+const $=id=>document.getElementById(id);
+const fmt=n=>'$'+Math.round(n).toLocaleString('zh-TW');
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const dayKey=d=>{d=new Date(d);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sameMonth=t=>{const a=new Date(t),b=new Date();return a.getFullYear()==b.getFullYear()&&a.getMonth()==b.getMonth()};
+
+function ensureGoal(){if(!S.goals.length)S.goals.push({id:uid(),name:'緊急預備金',target:60000,date:'',created:Date.now()})}
+function deposit(amount,goalId,note){
+  amount=Number(amount);if(!(amount>0))return false;
+  ensureGoal();goalId=goalId||S.goals[0].id;
+  S.deposits.push({id:uid(),amount,goalId,note:note||'',t:Date.now()});return true;
+}
+const goalSaved=id=>S.deposits.filter(d=>d.goalId==id).reduce((a,d)=>a+d.amount,0);
+
+/* ---- 計畫計算 ---- */
+function planCalc(){
+  const p=S.plan,save=p.income*p.rate/100;
+  const spendable=Math.max(0,p.income-p.fixed-save);
+  const now=new Date(),dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+  const spent=S.spends.filter(s=>sameMonth(s.t)).reduce((a,s)=>a+s.amount,0);
+  const left=spendable-spent,daysLeft=dim-now.getDate()+1;
+  const todaySpent=S.spends.filter(s=>dayKey(s.t)==dayKey(now)).reduce((a,s)=>a+s.amount,0);
+  const daily=(left+todaySpent)/daysLeft-todaySpent;
+  return {save,spendable,spent,left,daily,daysLeft,dim,todaySpent};
+}
+function streak(){
+  const days=new Set(S.deposits.map(d=>dayKey(d.t)));let n=0,d=new Date();
+  if(!days.has(dayKey(d)))d.setDate(d.getDate()-1);
+  while(days.has(dayKey(d))){n++;d.setDate(d.getDate()-1)}return n;
+}
+
+/* ---- 挑戰 ---- */
+const chalVal=i=>S.chal.mode=='52'?(i)*50:i;
+const chalN=()=>S.chal.mode=='52'?52:365;
+function setChalMode(m){if(S.chal.done.length&&m!=S.chal.mode&&!confirm('切換模式會清除目前挑戰進度，確定？')){$('c-mode').value=S.chal.mode;return}if(m!=S.chal.mode){S.chal={mode:m,done:[]}}save()}
+function toggleCell(i){
+  const k=S.chal.done.indexOf(i);
+  if(k>=0){if(!confirm('取消這格？（對應的存款紀錄也會刪除）'))return;S.chal.done.splice(k,1);
+    const di=S.deposits.findIndex(d=>d.chal==S.chal.mode+':'+i);if(di>=0)S.deposits.splice(di,1);}
+  else{deposit(chalVal(i),$('c-goal').value,'存錢挑戰 #'+i);S.deposits[S.deposits.length-1].chal=S.chal.mode+':'+i;S.chal.done.push(i)}
+  save();
+}
+
+/* ---- 動作 ---- */
+function quickSave(){if(deposit($('q-amt').value,$('q-goal').value,'手動存入')){$('q-amt').value='';save()}}
+function savePlan(){S.plan={income:+$('p-income').value||0,fixed:+$('p-fixed').value||0,rate:+$('p-rate').value||0,payday:+$('p-payday').value||1};save()}
+function addGoal(){const n=$('g-name').value.trim(),t=+$('g-target').value;if(!n||!(t>0))return alert('請填目標名稱與金額');
+  S.goals.push({id:uid(),name:n,target:t,date:$('g-date').value,created:Date.now()});$('g-name').value=$('g-target').value='';save()}
+function delGoal(id){if(!confirm('刪除目標與其存款紀錄？'))return;S.goals=S.goals.filter(g=>g.id!=id);S.deposits=S.deposits.filter(d=>d.goalId!=id);save()}
+function goalDeposit(id){const v=prompt('存入多少？');if(deposit(v,id,'手動存入'))save()}
+function addSpend(){const a=+$('s-amt').value;if(!(a>0))return;S.spends.push({id:uid(),amount:a,cat:$('s-cat').value,note:$('s-note').value.trim(),t:Date.now()});$('s-amt').value=$('s-note').value='';save()}
+function delSpend(id){S.spends=S.spends.filter(s=>s.id!=id);save()}
+function delDeposit(id){S.deposits=S.deposits.filter(d=>d.id!=id);save()}
+function addWish(){const n=$('w-name').value.trim(),p=+$('w-price').value;if(!n||!(p>0))return;S.wishes.push({id:uid(),name:n,price:p,t:Date.now(),status:'wait'});$('w-name').value=$('w-price').value='';save()}
+function wishSkip(id){const w=S.wishes.find(x=>x.id==id);w.status='skip';deposit(w.price,null,'放棄購買：'+w.name);save()}
+function wishBuy(id){const w=S.wishes.find(x=>x.id==id);w.status='buy';S.spends.push({id:uid(),amount:w.price,cat:'購物',note:w.name,t:Date.now()});save()}
+function exportData(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,2)],{type:'application/json'}));a.download='savings-'+dayKey(Date.now())+'.json';a.click()}
+function importData(inp){const f=inp.files[0];if(!f)return;f.text().then(t=>{try{S=Object.assign(structuredClone(DEF),JSON.parse(t));save();alert('匯入完成')}catch(e){alert('檔案格式錯誤')}})}
+function resetAll(){if(confirm('確定清除所有資料？此動作無法復原。')){S=structuredClone(DEF);save()}}
+
+/* ---- 畫面 ---- */
+function goalOptions(){ensureGoal();return S.goals.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join('')}
+function render(){
+  ensureGoal();
+  const c=planCalc(),total=S.deposits.reduce((a,d)=>a+d.amount,0);
+  const mSaved=S.deposits.filter(d=>sameMonth(d.t)).reduce((a,d)=>a+d.amount,0);
+  $('today').textContent=new Date().toLocaleDateString('zh-TW',{month:'long',day:'numeric',weekday:'short'});
+  $('h-total').textContent=fmt(total);
+  $('h-month').textContent=fmt(mSaved)+' / '+fmt(c.save);
+  $('h-streak').textContent=streak()+' 天';
+  $('h-daily').textContent=S.plan.income?fmt(Math.max(0,c.daily)):'—';
+  $('h-left').textContent=S.plan.income?fmt(c.left):'—';
+  const pct=c.save?Math.min(100,mSaved/c.save*100):0;
+  $('h-bar').firstElementChild.style.width=pct+'%';
+  $('h-bar-t').textContent=c.save?`本月儲蓄目標完成 ${pct.toFixed(0)}%`:'先到「計畫」設定收入與儲蓄比例';
+  let al='';
+  if(S.plan.income&&c.left<0)al=`<div class="alert">⚠️ 本月已超支 ${fmt(-c.left)}，接下來每一筆都會吃掉存款。</div>`;
+  else if(S.plan.income&&c.daily<0)al=`<div class="alert">⚠️ 今天已超過每日額度 ${fmt(-c.daily)}，明天的額度會自動變少。</div>`;
+  const now=new Date();
+  if(S.plan.income&&now.getDate()==S.plan.payday&&mSaved<c.save)al+=`<div class="tip" style="margin-bottom:14px">📅 今天是發薪日！先把 <b>${fmt(c.save-mSaved)}</b> 轉到儲蓄帳戶，再開始花錢。</div>`;
+  $('h-alert').innerHTML=al?`<div style="margin-bottom:14px">${al}</div>`:'';
+  ['q-goal','c-goal'].forEach(id=>{const v=$(id).value;$(id).innerHTML=goalOptions();if(v&&S.goals.some(g=>g.id==v))$(id).value=v});
+  const tips=['把存錢設成「自動轉帳」，在發薪日當天就轉走，最有效。','零錢、發票中獎、退款，一律直接存進目標。','每取消一個訂閱，就把月費改成每月自動存款。','想買東西時，先放進「冷靜清單」等 72 小時。','先存緊急預備金（3~6 個月生活費），再存其他目標。'];
+  $('h-tip').textContent='💡 '+tips[now.getDate()%tips.length];
+  const log=[...S.deposits.map(d=>({...d,k:'d'})),...S.spends.map(s=>({...s,k:'s'}))].sort((a,b)=>b.t-a.t).slice(0,8);
+  $('h-log').innerHTML=log.length?log.map(x=>`<li><span>${x.k=='d'?'🟢 存入':'🔴 花費'} <span class="muted">${esc(x.note||x.cat||'')}</span></span><span>${x.k=='d'?'+':'-'}${fmt(x.amount)}</span></li>`).join(''):'<li class="muted">還沒有紀錄，從存第一筆開始吧！</li>';
+
+  // 計畫
+  $('p-income').value=S.plan.income||'';$('p-fixed').value=S.plan.fixed||'';$('p-rate').value=S.plan.rate;$('p-payday').value=S.plan.payday;
+  $('p-result').innerHTML=S.plan.income?`
+    <h2>你的每月分配</h2>
+    <ul class="list">
+      <li><span>① 發薪日先存</span><b>${fmt(c.save)}</b></li>
+      <li><span>② 固定支出</span><b>${fmt(S.plan.fixed)}</b></li>
+      <li><span>③ 剩下可以花</span><b>${fmt(c.spendable)}</b></li>
+      <li><span>　平均每天可花</span><b>${fmt(c.spendable/c.dim)}</b></li>
+      <li><span>　一年可存下</span><b style="color:var(--pri)">${fmt(c.save*12)}</b></li>
+    </ul>
+    ${S.plan.rate<10?'<div class="alert" style="margin-top:10px">儲蓄比例低於 10%，建議至少 10~20%。</div>':''}
+    ${c.spendable<=0?'<div class="alert" style="margin-top:10px">收入不夠支付固定支出＋儲蓄，請調低比例或檢視固定支出。</div>':''}`
+    :'<span class="muted">填入收入後會顯示每月分配。</span>';
+
+  // 目標
+  $('g-list').innerHTML=S.goals.map(g=>{
+    const s=goalSaved(g.id),p=Math.min(100,s/g.target*100),rest=Math.max(0,g.target-s);
+    let need='';
+    if(g.date&&rest>0){const days=Math.ceil((new Date(g.date)-new Date())/864e5);
+      need=days>0?`<span class="chip">每天 ${fmt(rest/days)}｜每週 ${fmt(rest/days*7)}｜每月 ${fmt(rest/days*30)}</span>`:`<span class="chip w">已過期限，還差 ${fmt(rest)}</span>`}
+    if(rest<=0)need='<span class="chip">🎉 達成！</span>';
+    return `<div class="goal"><div class="top"><b>${esc(g.name)}</b><span>${fmt(s)} / ${fmt(g.target)}</span></div>
+      <div class="bar" style="margin:8px 0"><i style="width:${p}%"></i></div>
+      <div class="row" style="justify-content:space-between">${need||'<span class="muted">未設期限</span>'}
+      <span><button class="sm" onclick="goalDeposit('${g.id}')">存入</button> <button class="sm ghost" onclick="delGoal('${g.id}')">刪除</button></span></div></div>`}).join('');
+
+  // 記帳
+  const ms=S.spends.filter(s=>sameMonth(s.t)),byCat={};ms.forEach(s=>byCat[s.cat]=(byCat[s.cat]||0)+s.amount);
+  const mx=Math.max(1,...Object.values(byCat));
+  $('s-cats').innerHTML=Object.keys(byCat).length?Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div style="margin-bottom:8px"><div class="row" style="justify-content:space-between"><span>${k}</span><span>${fmt(v)}</span></div><div class="bar"><i style="width:${v/mx*100}%"></i></div></div>`).join('')
+    +`<div class="muted">本月合計 ${fmt(c.spent)}${S.plan.income?'，可花額度 '+fmt(c.spendable):''}</div>`:'<span class="muted">本月還沒有花費紀錄</span>';
+  $('s-list').innerHTML=ms.length?ms.slice().reverse().map(s=>`<li><span>${new Date(s.t).getDate()}日 ${s.cat} <span class="muted">${esc(s.note)}</span></span><span>${fmt(s.amount)} <button class="sm ghost" onclick="delSpend('${s.id}')">✕</button></span></li>`).join(''):'<li class="muted">—</li>';
+
+  // 挑戰
+  const n=chalN();let cells='',sum=0,max=0;
+  for(let i=1;i<=n;i++){const d=S.chal.done.includes(i);max+=chalVal(i);if(d)sum+=chalVal(i);cells+=`<button class="${d?'done':''}" onclick="toggleCell(${i})">${chalVal(i)}</button>`}
+  $('c-mode').value=S.chal.mode;$('c-cells').innerHTML=cells;$('c-max').textContent=fmt(max);
+  $('c-bar').style.width=(sum/max*100)+'%';$('c-prog').textContent=`已完成 ${S.chal.done.length}/${n} 格，存了 ${fmt(sum)}`;
+
+  // 冷靜清單
+  const H72=72*36e5,wait=S.wishes.filter(w=>w.status=='wait');
+  $('w-list').innerHTML=wait.length?wait.map(w=>{const left=w.t+H72-Date.now(),ok=left<=0;
+    return `<div class="goal"><div class="top"><b>${esc(w.name)}</b><span>${fmt(w.price)}</span></div>
+    <div class="row" style="justify-content:space-between;margin-top:6px">
+      <span class="chip ${ok?'':'w'}">${ok?'冷靜期結束，你還想要嗎？':'還要等 '+Math.ceil(left/36e5)+' 小時'}</span>
+      <span><button class="sm" onclick="wishSkip('${w.id}')">不買了，存起來</button> ${ok?`<button class="sm ghost" onclick="wishBuy('${w.id}')">買</button>`:''}</span></div></div>`}).join(''):'<span class="muted">清單是空的 👍</span>';
+  $('w-saved').textContent=fmt(S.wishes.filter(w=>w.status=='skip').reduce((a,w)=>a+w.price,0));
+}
+
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x==b));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.id=='t-'+b.dataset.t));
+  scrollTo(0,0);
+});
+render();
+</script>
+</body>
+</html>
